@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Live Stream</title>
+  <title>Live Stream — VDO.Ninja</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background: #111;
       color: #eee;
-      font-family: sans-serif;
+      font-family: Arial, Helvetica, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -19,6 +19,8 @@
       gap: 1rem;
     }
     h1 { font-size: 1.4rem; letter-spacing: 0.05em; opacity: 0.8; }
+
+    /* --- Start button --- */
     #startBtn {
       padding: 0.75rem 2rem;
       font-size: 1.1rem;
@@ -30,6 +32,8 @@
       transition: background 0.2s;
     }
     #startBtn:hover { background: #c02; }
+
+    /* --- Stream wrapper (16:9) --- */
     #stream-wrapper {
       width: 100%;
       max-width: 1280px;
@@ -38,40 +42,85 @@
       border-radius: 4px;
       overflow: hidden;
       display: none;
+      position: relative;
     }
+
+    /*
+     * iframe sizing pattern sourced from steveseguin/vdo.ninja iframe.css:
+     * width/height 100%, border 0, display block.
+     */
     #stream-wrapper iframe {
-      width: 100vw;
-      height: 100vh;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
       border: 0;
-      margin: 0;
-      padding: 0;
+      display: block;
     }
-    #status { font-size: 0.85rem; opacity: 0.5; min-height: 1.2em; }
+
+    /* --- Live controls (shown after stream starts) --- */
+    #controls {
+      display: none;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #controls button {
+      padding: 0.5rem 1.1rem;
+      font-size: 0.9rem;
+      background: #222;
+      color: #eee;
+      border: 1px solid #444;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    #controls button:hover { background: #333; }
+
+    /* --- Status bar --- */
+    #status {
+      font-size: 0.8rem;
+      opacity: 0.5;
+      min-height: 1.2em;
+      font-family: monospace;
+    }
   </style>
 </head>
 <body>
-  <h1>Live Stream</h1>
+  <h1>&#128250; Live Stream</h1>
   <button id="startBtn">&#9654; Watch Live</button>
 
   <div id="stream-wrapper">
     <!--
-      allow string sourced directly from:
-      https://github.com/steveseguin/vdo.ninja/blob/develop/examples/overlay.html
+      allow / credentialless pattern sourced from:
+      steveseguin/vdo.ninja  develop  iframe.html  (buildIframeAllowPermissions)
 
-      &push=Ce4HsNS        — connects to stream Ce4HsNS
-      &cleanoutput         — hides VDO.Ninja UI chrome
-      &transparent         — transparent background
-      &autoplay            — autoplay after user gesture (button click)
-      &videodevice=0       — disables viewer camera
-      &audiodevice=0       — disables viewer mic
+      Chrome supports credentialless iframes for cross-origin isolation;
+      Firefox does not, so we fall back to the standard allow string.
+
+      URL params:
+        &push=Ce4HsNS   — stream ID to view
+        &cleanoutput     — hides VDO.Ninja chrome
+        &transparent     — transparent bg
+        &autoplay        — autoplay (requires prior user gesture — satisfied by the button click)
+        &videodevice=0   — disables viewer camera
+        &audiodevice=0   — disables viewer mic
     -->
     <iframe
       id="stream"
       src=""
-      allow="document-domain;encrypted-media;sync-xhr;usb;web-share;cross-origin-isolated;accelerometer;midi;geolocation;autoplay;camera;microphone;fullscreen;picture-in-picture;display-capture;"
-      allowfullscreen
-      allowtransparency="true">
+      allowtransparency="true"
+      allowfullscreen>
     </iframe>
+  </div>
+
+  <!-- Quick API controls (visible once stream is active) -->
+  <div id="controls">
+    <button onclick="post({ speaker: 'toggle' })">&#128264; Toggle Speaker</button>
+    <button onclick="post({ getLoudness: true })">&#128200; Loudness On</button>
+    <button onclick="post({ getLoudness: false })">&#9209;&#65039; Loudness Off</button>
+    <button onclick="post({ getStats: true })">&#128202; Get Stats</button>
+    <button onclick="post({ getStreamIDs: true })">&#128203; Stream IDs</button>
   </div>
 
   <p id="status"></p>
@@ -81,45 +130,96 @@
 
     var iframe  = document.getElementById('stream');
     var wrapper = document.getElementById('stream-wrapper');
+    var controls = document.getElementById('controls');
     var status  = document.getElementById('status');
 
-    // iframe src set on click — browsers require a user gesture before allowing autoplay
+    // ---------------------------------------------------------------
+    // Build the correct allow string and optionally use credentialless
+    // iframes — logic ported from steveseguin/vdo.ninja iframe.html
+    // ---------------------------------------------------------------
+    function supportsCredentialless() {
+      try { return 'credentialless' in HTMLIFrameElement.prototype; } catch(e) { return false; }
+    }
+    function isFirefox() {
+      return /\bfirefox\/|\bfxios\/|\bwaterfox\/|\blibrewolf\/|\biceweasel\/|\bzen\b/i.test(navigator.userAgent || '');
+    }
+    var useCredentialless = supportsCredentialless() && !isFirefox();
+
+    var permissions = [
+      'encrypted-media', 'sync-xhr', 'usb', 'web-share',
+      'midi *', 'geolocation', 'camera *', 'microphone *',
+      'fullscreen', 'picture-in-picture', 'display-capture',
+      'accelerometer', 'autoplay', 'gyroscope', 'screen-wake-lock'
+    ];
+    if (useCredentialless) permissions.splice(5, 0, 'cross-origin-isolated');
+    iframe.setAttribute('allow', permissions.join(';') + ';');
+
+    if (useCredentialless) {
+      iframe.setAttribute('crossorigin', 'anonymous');
+      iframe.setAttribute('credentialless', 'true');
+    }
+
+    // ---------------------------------------------------------------
+    // Start stream on button click (user gesture required for autoplay)
+    // ---------------------------------------------------------------
     document.getElementById('startBtn').addEventListener('click', function () {
-      iframe.src = 'https://vdo.ninja/?push=' + STREAM_ID +
-                   '&cleanoutput&transparent&autoplay&videodevice=0&audiodevice=0';
-      wrapper.style.display = 'block';
-      document.getElementById('startBtn').style.display = 'none';
+      var url = 'https://vdo.ninja/?push=' + STREAM_ID +
+                '&cleanoutput&transparent&autoplay&videodevice=0&audiodevice=0';
+      iframe.src = url;
+      wrapper.style.display  = 'block';
+      controls.style.display = 'flex';
+      this.style.display     = 'none';
+      setStatus('Connecting…');
     });
 
-    // ---- IFRAME API event listener ----
-    // Pattern from: https://github.com/steveseguin/vdo.ninja/blob/develop/iframe.html
-    var eventMethod  = window.addEventListener ? 'addEventListener' : 'attachEvent';
-    var eventer      = window[eventMethod];
-    var messageEvent = eventMethod === 'attachEvent' ? 'onmessage' : 'message';
+    // ---------------------------------------------------------------
+    // postMessage helper — send API commands to the VDO.Ninja iframe
+    // Pattern from steveseguin/vdo.ninja iframe.html  postToFrame()
+    // ---------------------------------------------------------------
+    function post(message) {
+      if (!iframe.contentWindow) { setStatus('iframe not ready'); return; }
+      iframe.contentWindow.postMessage(message, '*');
+      setStatus('Sent: ' + JSON.stringify(message));
+    }
 
-    eventer(messageEvent, function (e) {
-      if (e.source !== iframe.contentWindow) { return; } // reject messages from other iframes
+    // ---------------------------------------------------------------
+    // Incoming message handler
+    // Event types documented in steveseguin/vdo.ninja examples/iframeapi.md
+    // ---------------------------------------------------------------
+    window.addEventListener('message', function (e) {
+      if (e.source !== iframe.contentWindow) return;
+      if (typeof e.data !== 'object') return;
 
-      if ('action' in e.data) {
-        status.textContent = 'Event: ' + e.data.action;
+      var d = e.data;
+
+      if (d.action) {
+        setStatus('Action: ' + d.action + (d.streamID ? ' (' + d.streamID + ')' : ''));
+        return;
       }
-      if ('gotChat' in e.data) {
-        status.textContent = 'Chat: ' + e.data.gotChat.msg;
+      if (d.loudness) {
+        var parts = [];
+        for (var k in d.loudness) parts.push(k + ': ' + d.loudness[k].toFixed(1) + ' dB');
+        setStatus('Loudness — ' + parts.join(' | '));
+        return;
       }
-      if ('loudness' in e.data) {
-        var levels = [];
-        for (var key in e.data.loudness) {
-          levels.push(key + ': ' + e.data.loudness[key]);
-        }
-        status.textContent = 'Loudness — ' + levels.join(' | ');
+      if (d.stats) {
+        var ib = d.stats.total_inbound_connections  || 0;
+        var ob = d.stats.total_outbound_connections || 0;
+        setStatus('Stats — in: ' + ib + '  out: ' + ob);
+        return;
       }
-      if ('stats' in e.data) {
-        var inbound  = e.data.stats.inbound  || e.data.stats.inbound_stats  || {};
-        var outbound = e.data.stats.outbound || e.data.stats.outbound_stats || {};
-        status.textContent = 'Stats — inbound: ' + Object.keys(inbound).length +
-                             ', outbound: ' + Object.keys(outbound).length;
+      if (d.streamIDs) {
+        var ids = Object.keys(d.streamIDs).join(', ');
+        setStatus('Streams: ' + (ids || 'none'));
+        return;
       }
+      // Fallback
+      setStatus(JSON.stringify(d).substring(0, 120));
     }, false);
+
+    function setStatus(msg) {
+      status.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+    }
   </script>
 </body>
 </html>
