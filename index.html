@@ -163,7 +163,7 @@
     // Start stream on button click (user gesture required for autoplay)
     // ---------------------------------------------------------------
     document.getElementById('startBtn').addEventListener('click', function () {
-      var url = 'https://vdo.ninja/?push=' + STREAM_ID +
+      var url = 'https://vdo.ninja/?view=' + STREAM_ID +
                 '&cleanoutput&transparent&autoplay&videodevice=0&audiodevice=0';
       iframe.src = url;
       wrapper.style.display  = 'block';
