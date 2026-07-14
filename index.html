@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Live Stream</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -40,9 +40,11 @@
       display: none;
     }
     #stream-wrapper iframe {
-      width: 100%;
-      height: 100%;
+      width: 100vw;
+      height: 100vh;
       border: 0;
+      margin: 0;
+      padding: 0;
     }
     #status { font-size: 0.85rem; opacity: 0.5; min-height: 1.2em; }
   </style>
@@ -52,10 +54,21 @@
   <button id="startBtn">&#9654; Watch Live</button>
 
   <div id="stream-wrapper">
+    <!--
+      allow string sourced directly from:
+      https://github.com/steveseguin/vdo.ninja/blob/develop/examples/overlay.html
+
+      &push=Ce4HsNS        — connects to stream Ce4HsNS
+      &cleanoutput         — hides VDO.Ninja UI chrome
+      &transparent         — transparent background
+      &autoplay            — autoplay after user gesture (button click)
+      &videodevice=0       — disables viewer camera
+      &audiodevice=0       — disables viewer mic
+    -->
     <iframe
       id="stream"
       src=""
-      allow="encrypted-media;sync-xhr;usb;web-share;midi *;geolocation;camera *;microphone *;fullscreen;picture-in-picture;display-capture;accelerometer;autoplay;gyroscope;screen-wake-lock;"
+      allow="document-domain;encrypted-media;sync-xhr;usb;web-share;cross-origin-isolated;accelerometer;midi;geolocation;autoplay;camera;microphone;fullscreen;picture-in-picture;display-capture;"
       allowfullscreen
       allowtransparency="true">
     </iframe>
@@ -66,24 +79,26 @@
   <script>
     var STREAM_ID = 'Ce4HsNS';
 
-    var iframe = document.getElementById('stream');
+    var iframe  = document.getElementById('stream');
     var wrapper = document.getElementById('stream-wrapper');
     var status  = document.getElementById('status');
 
-    // &videodevice=0 disables participant camera
-    // &audiodevice=0 disables participant mic
+    // iframe src set on click — browsers require a user gesture before allowing autoplay
     document.getElementById('startBtn').addEventListener('click', function () {
-      iframe.src = 'https://vdo.ninja/?push=' + STREAM_ID + '&cleanoutput&transparent&autoplay&videodevice=0&audiodevice=0';
+      iframe.src = 'https://vdo.ninja/?push=' + STREAM_ID +
+                   '&cleanoutput&transparent&autoplay&videodevice=0&audiodevice=0';
       wrapper.style.display = 'block';
       document.getElementById('startBtn').style.display = 'none';
     });
 
-    var eventMethod = window.addEventListener ? 'addEventListener' : 'attachEvent';
-    var eventer     = window[eventMethod];
+    // ---- IFRAME API event listener ----
+    // Pattern from: https://github.com/steveseguin/vdo.ninja/blob/develop/iframe.html
+    var eventMethod  = window.addEventListener ? 'addEventListener' : 'attachEvent';
+    var eventer      = window[eventMethod];
     var messageEvent = eventMethod === 'attachEvent' ? 'onmessage' : 'message';
 
     eventer(messageEvent, function (e) {
-      if (e.source !== iframe.contentWindow) { return; }
+      if (e.source !== iframe.contentWindow) { return; } // reject messages from other iframes
 
       if ('action' in e.data) {
         status.textContent = 'Event: ' + e.data.action;
@@ -101,7 +116,8 @@
       if ('stats' in e.data) {
         var inbound  = e.data.stats.inbound  || e.data.stats.inbound_stats  || {};
         var outbound = e.data.stats.outbound || e.data.stats.outbound_stats || {};
-        status.textContent = 'Stats — inbound: ' + Object.keys(inbound).length + ', outbound: ' + Object.keys(outbound).length;
+        status.textContent = 'Stats — inbound: ' + Object.keys(inbound).length +
+                             ', outbound: ' + Object.keys(outbound).length;
       }
     }, false);
   </script>
