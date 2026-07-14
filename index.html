@@ -72,7 +72,7 @@
 
     // Set src on click so browsers allow autoplay (requires user gesture)
     document.getElementById('startBtn').addEventListener('click', function () {
-      iframe.src = 'https://vdo.ninja/?view=' + STREAM_ID + '&cleanoutput&transparent&autoplay';
+      iframe.src = 'https://vdo.ninja/?push=' + STREAM_ID + '&cleanoutput&transparent&autoplay';
       wrapper.style.display = 'block';
       document.getElementById('startBtn').style.display = 'none';
     });
