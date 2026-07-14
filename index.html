@@ -70,30 +70,27 @@
     var wrapper = document.getElementById('stream-wrapper');
     var status  = document.getElementById('status');
 
-    // Set src on click so browsers allow autoplay (requires user gesture)
+    // &videodevice=0 disables participant camera
+    // &audiodevice=0 disables participant mic
     document.getElementById('startBtn').addEventListener('click', function () {
-      iframe.src = 'https://vdo.ninja/?push=' + STREAM_ID + '&cleanoutput&transparent&autoplay';
+      iframe.src = 'https://vdo.ninja/?push=' + STREAM_ID + '&cleanoutput&transparent&autoplay&videodevice=0&audiodevice=0';
       wrapper.style.display = 'block';
       document.getElementById('startBtn').style.display = 'none';
     });
 
-    // ---- IFRAME API: listen for events from VDO.Ninja child frame ----
-    // Pattern from official docs: iframe.html
     var eventMethod = window.addEventListener ? 'addEventListener' : 'attachEvent';
     var eventer     = window[eventMethod];
     var messageEvent = eventMethod === 'attachEvent' ? 'onmessage' : 'message';
 
     eventer(messageEvent, function (e) {
-      if (e.source !== iframe.contentWindow) { return; } // reject other iframes
+      if (e.source !== iframe.contentWindow) { return; }
 
       if ('action' in e.data) {
         status.textContent = 'Event: ' + e.data.action;
       }
-
       if ('gotChat' in e.data) {
         status.textContent = 'Chat: ' + e.data.gotChat.msg;
       }
-
       if ('loudness' in e.data) {
         var levels = [];
         for (var key in e.data.loudness) {
@@ -101,12 +98,10 @@
         }
         status.textContent = 'Loudness — ' + levels.join(' | ');
       }
-
       if ('stats' in e.data) {
         var inbound  = e.data.stats.inbound  || e.data.stats.inbound_stats  || {};
         var outbound = e.data.stats.outbound || e.data.stats.outbound_stats || {};
-        status.textContent = 'Stats — inbound connections: ' +
-          Object.keys(inbound).length + ', outbound: ' + Object.keys(outbound).length;
+        status.textContent = 'Stats — inbound: ' + Object.keys(inbound).length + ', outbound: ' + Object.keys(outbound).length;
       }
     }, false);
   </script>
