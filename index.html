@@ -66,12 +66,12 @@
 
   <script>
     // Replace YOUR_STREAM_ID with your VDO.Ninja view/stream ID
-    const STREAM_ID = 'YOUR_STREAM_ID';
+    const STREAM_ID = 'nscadu';
 
     document.getElementById('startBtn').addEventListener('click', () => {
       const iframe = document.getElementById('stream');
       const wrapper = document.getElementById('stream-wrapper');
-      iframe.src = `https://vdo.ninja/?view=${STREAM_ID}&cleanoutput&autoplay`;
+      iframe.src = `https://vdo.ninja/?scene&room=${STREAM_ID}&cleanoutput&autoplay`;
       wrapper.style.display = 'block';
       document.getElementById('startBtn').style.display = 'none';
     });
