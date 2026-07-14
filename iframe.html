@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>VDO.Ninja IFRAME API - Interactive Developer Console</title>
+	<title>VDO.Ninja IFRAME API - Local Development Console</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 	<meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
 	<link rel="stylesheet" href="iframe.css" />
@@ -491,11 +491,31 @@
 		return Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 10);
 	}
 
+	// Local development override - redirects vdo.ninja domains to localhost
+	function getLocalOrigin() {
+		const host = window.location.hostname;
+		const port = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
+		return `${window.location.protocol}//${host}${port ? ':' + port : ''}`;
+	}
+
 	function normalizeIframeUrl(inputUrl) {
 		const value = (inputUrl || "").trim();
 		if (!/^https?:\/\//i.test(value)) return value;
+		
 		try {
 			const parsed = new URL(value);
+			
+			// Redirect vdo.ninja and related domains to local development server
+			const vdoNinjaHosts = ['vdo.ninja', 'www.vdo.ninja', 'alpha.vdo.ninja', 'beta.vdo.ninja', 'api.vdo.ninja'];
+			if (vdoNinjaHosts.includes(parsed.hostname)) {
+				const localOrigin = getLocalOrigin();
+				parsed.protocol = window.location.protocol;
+				parsed.hostname = window.location.hostname;
+				parsed.port = window.location.port;
+				console.log(`[LOCAL DEV] Redirecting ${value} to ${parsed.toString().replace(window.location.protocol + '//', localOrigin + '//')}`);
+				return localOrigin + parsed.pathname + parsed.search + parsed.hash;
+			}
+			
 			if (!parsed.search && !parsed.hash) {
 				const path = parsed.pathname || "/";
 				const lastSegment = path.substring(path.lastIndexOf("/") + 1);
@@ -519,7 +539,7 @@
 	window.addEventListener('error', function(e) { console.error('Global error:', e); });
 	window.addEventListener('DOMContentLoaded', function() {
 		const viewlink = document.getElementById('viewlink');
-		if (!viewlink.value) viewlink.placeholder = "e.g., https://vdo.ninja/?view=teststream or just 'vdo.ninja/?room=myroom'";
+		if (!viewlink.value) viewlink.placeholder = "Enter room name (e.g., myroom) or use relative paths like /?room=myroom";
 		document.addEventListener('keydown', function(e) {
 			if (e.ctrlKey && e.key === 'k') { e.preventDefault(); document.querySelector('.custom-post-input')?.focus(); }
 		});
@@ -528,12 +548,12 @@
 </head>
 <body>
 	<div class="header-section">
-		<h1>🚀 VDO.Ninja IFRAME API — Interactive Developer Console</h1>
-		<p>Test and explore the VDO.Ninja IFRAME API. Enter a VDO.Ninja URL below to get started.</p>
+		<h1>🚀 VDO.Ninja IFRAME API — Local Development Console</h1>
+		<p>Test and explore the VDO.Ninja IFRAME API using your local development server. Enter a room name or relative URL.</p>
 	</div>
 
 	<div class="url-input-section">
-		<input placeholder="Enter a VDO.Ninja URL (e.g., vdo.ninja/?view=abc123 or vdo.ninja/?room=myroom)" id="viewlink" />
+		<input placeholder="Enter room name (e.g., myroom) or /?room=myroom" id="viewlink" />
 		<button onclick="loadIframe();" class="primary-button">➕ ADD IFRAME</button>
 		<div class="url-options">
 			<label><input type="checkbox" id="cleanoutput" checked> Clean Output</label>
@@ -546,9 +566,10 @@
 		<details>
 			<summary>📖 Quick Start Guide</summary>
 			<div class="guide-content">
-				<h3>Getting Started:</h3>
+				<h3>Getting Started (Local Development):</h3>
 				<ol>
-					<li>Enter a VDO.Ninja URL in the field above</li>
+					<li>Enter a room name (e.g., <code>myroom</code>) or relative URL (e.g., <code>/?room=myroom</code>)</li>
+					<li>VDO.Ninja URLs will automatically redirect to this local server</li>
 					<li>Click <strong>ADD IFRAME</strong> to embed it</li>
 					<li>Use the control panel on the left to send API commands</li>
 					<li>Monitor responses in the log window on the right</li>

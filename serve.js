@@ -72,10 +72,15 @@ const MIME = {
   '.map':  'application/json',
 };
 
-// Cross-Origin-Isolation headers — required for SharedArrayBuffer + credentialless iframes
+// Cross-Origin-Isolation headers — required for SharedArrayBuffer
+// Using 'credentialless' for COEP instead of 'require-corp' so that
+// credentialless iframes (Chrome 96+) can load cross-origin content
+// (like vdo.ninja) without the remote server needing explicit CORP headers.
+// Firefox does not support credentialless iframes, so on Firefox any COEP
+// will block cross-origin iframes — but at least this won't break Chrome/Edge.
 const COOP_COEP = {
   'Cross-Origin-Opener-Policy':   'same-origin',
-  'Cross-Origin-Embedder-Policy': 'require-corp',
+  'Cross-Origin-Embedder-Policy': 'credentialless',
 };
 
 // ── File root ─────────────────────────────────────────────────────────────────

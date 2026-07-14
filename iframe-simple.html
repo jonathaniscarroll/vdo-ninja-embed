@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>VDO.Ninja IFRAME API - Local Test</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<style>
+		body { font-family: sans-serif; margin: 0; padding: 20px; background: #1a1a2e; color: white; }
+		.url-input-section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; color: #333; }
+		input { padding: 8px; width: 300px; font-size: 14px; }
+		button { padding: 8px 16px; font-size: 14px; margin-left: 5px; }
+		.iframe-example { margin-top: 20px; border: 2px solid #4d66a8; border-radius: 8px; }
+		.status-indicator { color: #333; padding: 5px 10px; background: rgba(0,0,0,.1); border-radius: 15px; font-size: 14px; }
+	</style>
+</head>
+<body>
+	<h1>🚀 VDO.Ninja IFRAME API Tester (Local)</h1>
+	<div class="url-input-section">
+		<input id="viewlink" placeholder="Enter room/view (e.g., testroom)" />
+		<button onclick="loadIframe();">Add IFRAME</button>
+	</div>
+	<div id="container"></div>
+	
+	<script>
+	function loadIframe() {
+		var input = document.getElementById("viewlink").value.trim();
+		var room = input || "nscadu";
+		var iframe = document.createElement("iframe");
+		iframe.src = "/" + (room.includes("=") ? "?" : "?room=") + room.replace("?room=","").replace("?view=","").split("/")[0];
+		iframe.style.width = "100%";
+		iframe.style.height = "600px";
+		iframe.style.border = "1px solid #ccc";
+		iframe.setAttribute("credentialless", "true");
+		document.getElementById("container").appendChild(iframe);
+	}
+	
+	// Auto-load on page refresh
+	window.addEventListener("DOMContentLoaded", function() {
+		document.getElementById("viewlink").value = "nscadu";
+	});
+	</script>
+</body>
+</html>
