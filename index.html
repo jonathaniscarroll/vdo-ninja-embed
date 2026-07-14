@@ -16,13 +16,9 @@
       justify-content: center;
       min-height: 100vh;
       padding: 1rem;
+      gap: 1rem;
     }
-    h1 {
-      margin-bottom: 1rem;
-      font-size: 1.4rem;
-      letter-spacing: 0.05em;
-      opacity: 0.8;
-    }
+    h1 { font-size: 1.4rem; letter-spacing: 0.05em; opacity: 0.8; }
     #startBtn {
       padding: 0.75rem 2rem;
       font-size: 1.1rem;
@@ -31,7 +27,6 @@
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      margin-bottom: 1.5rem;
       transition: background 0.2s;
     }
     #startBtn:hover { background: #c02; }
@@ -49,12 +44,15 @@
       height: 100%;
       border: none;
     }
+    #status { font-size: 0.85rem; opacity: 0.5; min-height: 1.2em; }
   </style>
 </head>
 <body>
   <h1>Live Stream</h1>
   <button id="startBtn">&#9654; Watch Live</button>
   <div id="stream-wrapper">
+    <!-- iframe src is set on click to satisfy browser autoplay policies -->
+    <!-- allow list mirrors VDO.Ninja docs recommendations -->
     <iframe
       id="stream"
       src=""
@@ -63,18 +61,52 @@
       allowtransparency="true">
     </iframe>
   </div>
+  <p id="status"></p>
 
   <script>
-    // Replace YOUR_STREAM_ID with your VDO.Ninja view/stream ID
-    const STREAM_ID = 'nscadu';
+    // Replace with your VDO.Ninja stream ID
+    // e.g. if your push link is https://vdo.ninja/?push=JkYwyxy
+    // then STREAM_ID = 'JkYwyxy'
+    var STREAM_ID = 'YOUR_STREAM_ID';
 
-    document.getElementById('startBtn').addEventListener('click', () => {
-      const iframe = document.getElementById('stream');
-      const wrapper = document.getElementById('stream-wrapper');
-      iframe.src = `https://vdo.ninja/?scene&room=${STREAM_ID}&cleanoutput&autoplay`;
+    var iframe = document.getElementById('stream');
+    var wrapper = document.getElementById('stream-wrapper');
+    var status = document.getElementById('status');
+
+    document.getElementById('startBtn').addEventListener('click', function () {
+      // &cleanoutput removes VDO.Ninja UI chrome
+      // &autoplay starts video immediately after user gesture
+      iframe.src = 'https://vdo.ninja/?view=' + STREAM_ID + '&cleanoutput&autoplay';
       wrapper.style.display = 'block';
       document.getElementById('startBtn').style.display = 'none';
     });
+
+    // --- IFRAME API: listen for events from VDO.Ninja ---
+    // See https://docs.vdo.ninja/guides/iframe-api-documentation
+    var eventMethod = window.addEventListener ? 'addEventListener' : 'attachEvent';
+    var eventer = window[eventMethod];
+    var messageEvent = eventMethod === 'attachEvent' ? 'onmessage' : 'message';
+
+    eventer(messageEvent, function (e) {
+      // Only handle messages from our VDO.Ninja iframe
+      if (e.source !== iframe.contentWindow) return;
+
+      if ('action' in e.data) {
+        handleAction(e.data);
+      }
+    }, false);
+
+    function handleAction(data) {
+      if (data.action === 'view-connection') {
+        status.textContent = data.value ? 'Stream connected.' : 'Stream disconnected.';
+      } else if (data.action === 'guest-connected') {
+        status.textContent = 'Guest connected: ' + (data.value && data.value.label ? data.value.label : data.streamID);
+      } else if (data.action === 'director-connected') {
+        status.textContent = 'Director connected.';
+      } else if (data.action === 'push-connection' && data.value === false) {
+        status.textContent = 'Stream ended.';
+      }
+    }
   </script>
 </body>
 </html>
