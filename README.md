@@ -1,49 +1,58 @@
 # vdo-ninja-embed
 
-A minimal [GitHub Pages](https://pages.github.com/) site that embeds a [VDO.Ninja](https://vdo.ninja) live stream via iframe, following the [official VDO.Ninja embedding docs](https://docs.vdo.ninja/guides/how-to-use-vdo.ninja-on-a-website).
+A minimal [GitHub Pages](https://pages.github.com/) site that embeds a [VDO.Ninja](https://vdo.ninja) live stream via iframe, following the [official VDO.Ninja iframe docs](https://docs.vdo.ninja/guides/how-to-use-vdo.ninja-on-a-website).
+
+## Stream ID
+
+Currently set to `Ce4HsNS`. Edit the `STREAM_ID` variable in `index.html` to change it.
 
 ## Setup
 
-1. **Edit `index.html`** — replace `YOUR_STREAM_ID` with your VDO.Ninja stream ID.
-   - If your push link is `https://vdo.ninja/?push=JkYwyxy`, your ID is `JkYwyxy`.
-2. **Enable GitHub Pages** — go to **Settings → Pages → Source: Deploy from branch → `main` / `/ (root)`**.
-3. Your page will be live at `https://jonathaniscarroll.github.io/vdo-ninja-embed/`.
+1. Enable GitHub Pages — go to **Settings → Pages → Source: Deploy from branch → `main` / `/ (root)`**.
+2. Your page will be live at `https://jonathaniscarroll.github.io/vdo-ninja-embed/`.
 
-## How It Works
+## `allow` Attribute
 
-The `<iframe>` `src` is set **on button click** rather than on page load. This is required because browsers block audio autoplay unless a user gesture has already occurred on the page.
+The iframe uses the full permission string from the official docs:
 
-The page also wires up the **VDO.Ninja IFRAME API** (`postMessage`) to receive connection events and display a status message.
-
-## Key URL Parameters
-
-| Parameter | Effect |
-|---|---|
-| `&cleanoutput` | Hides VDO.Ninja UI chrome — shows only video |
-| `&autoplay` | Auto-starts video after user gesture |
-| `&muted` | Mutes audio (allows silent autoplay without gesture) |
-| `&transparent` | Transparent background (also set `allowtransparency="true"` on iframe) |
-| `&codec=h264` | Force H.264 codec |
-
-## Security: Audience Parameter
-
-For public deployments, use the `&audience` parameter (VDO.Ninja v25.2+) so viewers can't publish to your stream ID:
-
-- Push link: `https://vdo.ninja/?audience=YOUR_TOKEN&push=YOUR_STREAM_ID`
-- View link: `https://vdo.ninja/?audience=VIEWER_TOKEN&view=YOUR_STREAM_ID`
-
-See the [VDO.Ninja audience docs](https://docs.vdo.ninja/guides/how-to-use-vdo.ninja-on-a-website) for details.
+```
+encrypted-media;sync-xhr;usb;web-share;midi *;geolocation;camera *;microphone *;
+fullscreen;picture-in-picture;display-capture;accelerometer;autoplay;gyroscope;screen-wake-lock;
+```
 
 ## IFRAME API
 
-Send commands to the embedded VDO.Ninja instance via `postMessage`:
+Send commands to the embedded instance via `postMessage`:
 
 ```js
-// Mute speakers
+// Mute/unmute speaker
 iframe.contentWindow.postMessage({ mute: true }, '*');
+iframe.contentWindow.postMessage({ mute: false }, '*');
+iframe.contentWindow.postMessage({ mute: 'toggle' }, '*');
 
-// Get current stream IDs
-iframe.contentWindow.postMessage({ getStreamIDs: true, cib: 'my-callback' }, '*');
+// Volume
+iframe.contentWindow.postMessage({ volume: 0.5 }, '*');
+
+// Bitrate
+iframe.contentWindow.postMessage({ bitrate: 5000 }, '*');  // high
+iframe.contentWindow.postMessage({ bitrate: 30 }, '*');    // low
+iframe.contentWindow.postMessage({ bitrate: -1 }, '*');    // default
+
+// Stats + loudness
+iframe.contentWindow.postMessage({ getStats: true }, '*');
+iframe.contentWindow.postMessage({ getLoudness: true }, '*');
+
+// Reload / disconnect
+iframe.contentWindow.postMessage({ reload: true }, '*');
+iframe.contentWindow.postMessage({ close: true }, '*');
 ```
 
-Full reference: [VDO.Ninja IFRAME API Basics](https://docs.vdo.ninja/guides/iframe-api-documentation/iframe-api-basics)
+Full sandbox: [vdo.ninja/iframe](https://vdo.ninja/iframe) | Source: [iframe.html on GitHub](https://github.com/steveseguin/vdoninja/blob/master/iframe.html)
+
+## Transparency
+
+The iframe has `allowtransparency="true"` and the view URL includes `&transparent`, so the video background is `rgba(0,0,0,0)`. Remove `&transparent` from the `src` if you want VDO.Ninja's default dark background.
+
+## Securing Your Stream
+
+Use `&audience` (VDO.Ninja v25.2+) so only you can publish to the stream ID. See the [&audience docs](https://docs.vdo.ninja/advanced-settings/setup-parameters/and-audience).

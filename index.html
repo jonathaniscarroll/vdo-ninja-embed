@@ -42,7 +42,7 @@
     #stream-wrapper iframe {
       width: 100%;
       height: 100%;
-      border: none;
+      border: 0;
     }
     #status { font-size: 0.85rem; opacity: 0.5; min-height: 1.2em; }
   </style>
@@ -50,63 +50,65 @@
 <body>
   <h1>Live Stream</h1>
   <button id="startBtn">&#9654; Watch Live</button>
+
   <div id="stream-wrapper">
-    <!-- iframe src is set on click to satisfy browser autoplay policies -->
-    <!-- allow list mirrors VDO.Ninja docs recommendations -->
     <iframe
       id="stream"
       src=""
-      allow="camera; microphone; autoplay; fullscreen; display-capture"
+      allow="encrypted-media;sync-xhr;usb;web-share;midi *;geolocation;camera *;microphone *;fullscreen;picture-in-picture;display-capture;accelerometer;autoplay;gyroscope;screen-wake-lock;"
       allowfullscreen
       allowtransparency="true">
     </iframe>
   </div>
+
   <p id="status"></p>
 
   <script>
-    // Replace with your VDO.Ninja stream ID
-    // e.g. if your push link is https://vdo.ninja/?push=JkYwyxy
-    // then STREAM_ID = 'JkYwyxy'
-    var STREAM_ID = 'YOUR_STREAM_ID';
+    var STREAM_ID = 'Ce4HsNS';
 
     var iframe = document.getElementById('stream');
     var wrapper = document.getElementById('stream-wrapper');
-    var status = document.getElementById('status');
+    var status  = document.getElementById('status');
 
+    // Set src on click so browsers allow autoplay (requires user gesture)
     document.getElementById('startBtn').addEventListener('click', function () {
-      // &cleanoutput removes VDO.Ninja UI chrome
-      // &autoplay starts video immediately after user gesture
-      iframe.src = 'https://vdo.ninja/?view=' + STREAM_ID + '&cleanoutput&autoplay';
+      iframe.src = 'https://vdo.ninja/?view=' + STREAM_ID + '&cleanoutput&transparent&autoplay';
       wrapper.style.display = 'block';
       document.getElementById('startBtn').style.display = 'none';
     });
 
-    // --- IFRAME API: listen for events from VDO.Ninja ---
-    // See https://docs.vdo.ninja/guides/iframe-api-documentation
+    // ---- IFRAME API: listen for events from VDO.Ninja child frame ----
+    // Pattern from official docs: iframe.html
     var eventMethod = window.addEventListener ? 'addEventListener' : 'attachEvent';
-    var eventer = window[eventMethod];
+    var eventer     = window[eventMethod];
     var messageEvent = eventMethod === 'attachEvent' ? 'onmessage' : 'message';
 
     eventer(messageEvent, function (e) {
-      // Only handle messages from our VDO.Ninja iframe
-      if (e.source !== iframe.contentWindow) return;
+      if (e.source !== iframe.contentWindow) { return; } // reject other iframes
 
       if ('action' in e.data) {
-        handleAction(e.data);
+        status.textContent = 'Event: ' + e.data.action;
+      }
+
+      if ('gotChat' in e.data) {
+        status.textContent = 'Chat: ' + e.data.gotChat.msg;
+      }
+
+      if ('loudness' in e.data) {
+        var levels = [];
+        for (var key in e.data.loudness) {
+          levels.push(key + ': ' + e.data.loudness[key]);
+        }
+        status.textContent = 'Loudness — ' + levels.join(' | ');
+      }
+
+      if ('stats' in e.data) {
+        var inbound  = e.data.stats.inbound  || e.data.stats.inbound_stats  || {};
+        var outbound = e.data.stats.outbound || e.data.stats.outbound_stats || {};
+        status.textContent = 'Stats — inbound connections: ' +
+          Object.keys(inbound).length + ', outbound: ' + Object.keys(outbound).length;
       }
     }, false);
-
-    function handleAction(data) {
-      if (data.action === 'view-connection') {
-        status.textContent = data.value ? 'Stream connected.' : 'Stream disconnected.';
-      } else if (data.action === 'guest-connected') {
-        status.textContent = 'Guest connected: ' + (data.value && data.value.label ? data.value.label : data.streamID);
-      } else if (data.action === 'director-connected') {
-        status.textContent = 'Director connected.';
-      } else if (data.action === 'push-connection' && data.value === false) {
-        status.textContent = 'Stream ended.';
-      }
-    }
   </script>
 </body>
 </html>
