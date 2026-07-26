@@ -23,6 +23,7 @@ const fs     = require('fs');
 const path   = require('path');
 const url    = require('url');
 const os     = require('os');
+const SIGNAL_URL = process.env.VDO_SIGNAL_URL || 'wss://10.0.28.102:8444';
 
 const PORT = parseInt(process.argv[2]) || 8443;
 
@@ -173,6 +174,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('');
     console.log('  ⚠️   LAN devices will see a cert warning — click Advanced → Proceed');
   }
+  console.log(`  Signaling:      ${SIGNAL_URL}`);
   console.log('');
   console.log('  Press Ctrl+C to stop.');
   console.log('');
