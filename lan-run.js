@@ -24,6 +24,20 @@ function run(name, cmd, args, opts = {}) {
   return child;
 }
 
+const os = require('os');
+
+function getLanIP() {
+  const ifaces = os.networkInterfaces();
+  for (const name of Object.keys(ifaces)) {
+    for (const iface of ifaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) return iface.address;
+    }
+  }
+  return '127.0.0.1';
+}
+
+const LAN_IP = getLanIP();
+
 const signal = run(
   'signal',
   'node',
@@ -31,7 +45,7 @@ const signal = run(
   {
     cwd: path.join(root, 'websocket_server'),
     env: {
-      PORT: SIGNAL_PORT
+      PORT: SIGNAL_PORT   // was SIGNAL_PORT — vdoninja.js reads process.env.PORT
     }
   }
 );
@@ -43,7 +57,7 @@ const web = run(
   {
     cwd: root,
     env: {
-      VDO_SIGNAL_URL: `wss://10.0.28.102:${SIGNAL_PORT}`
+      VDO_SIGNAL_URL: `wss://${LAN_IP}:${SIGNAL_PORT}`
     }
   }
 );
